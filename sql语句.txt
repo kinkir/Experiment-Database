@@ -1,0 +1,129 @@
+insert into 课程实验1.dbo.FILM values( 7,'钢铁侠','科幻','斯皮尔伯格',134,'Y',96 )
+
+update 课程实验1.dbo.FILM set GRADE=100 where FNAME='钢铁侠'
+
+delete from 课程实验1.dbo.FILM where FNAME='钢铁侠'
+
+select * into 课程实验1.dbo.YOUNG_ACTOR  from 课程实验1.dbo.ACTOR where BYEAR>=1990
+
+select * from 课程实验1.dbo.Table_1 where a='放'
+
+create view dbo.LEADER_80(ACTID,ANAME,BYEAR,MCOUNT,MGRADE) as
+ select actor.ACTID,actor.ANAME,actor.BYEAR,
+ count(*),max(actin.GRADE) from 课程实验1.dbo.ACTOR actor,
+ 课程实验1.dbo.ACTIN actin where actor.ACTID=actin.ACTID and actin.ISLEADING='Y'
+ and actor.BYEAR>=1980 group by actor.ACTID,actor.BYEAR,actor.ANAME
+
+USE [课程实验1]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER TRIGGER [dbo].[FILM_TRIGGER]
+   ON [dbo].[FILM]
+   AFTER INSERT,UPDATE
+AS 
+BEGIN
+	update FILM set FTYPE='喜剧' where exists 
+	(select * from inserted where inserted.FID=FILM.FID and inserted.DNAME='周星驰')
+END
+
+
+查询：
+1）
+select s.* from dbo.SHOW s,dbo.THEATER t 
+where t.TAREA='洪山区' and s.YEAR=2017
+and t.TID=s.TID
+and s.FID in (select FID from dbo.FILM where FNAME='战狼')
+order by s.MONTH desc
+2）
+select f.* from dbo.FILM f
+where not exists (select * from dbo.ACTIN tmp where tmp.FID=f.FID)
+order by f.FTYPE,f.GRADE desc
+3）
+select f.FID,f.FNAME,f.DNAME from dbo.FILM f
+where 2017<all (select s.YEAR from dbo.SHOW s where s.FID=f.FID)
+4）
+select f.FID from dbo.FILM f where not exists 
+(select t.TID from dbo.THEATER t where t.TID not in 
+	(select s.TID from dbo.SHOW s where s.FID=f.FID)
+)
+5）
+select f.FID,f.FNAME,f.DNAME,f.GRADE from dbo.FILM f
+where f.GRADE not between 80 and 89
+6）
+select max(f.GRADE),min(f.GRADE),f.DNAME from dbo.FILM f group by f.DNAME
+7）
+select f.DNAME,count(f.FID) film_count from dbo.FILM f
+group by f.DNAME
+having count(f.FID)>=2
+8）
+select f.DNAME,count(f.FID),avg(f.GRADE) from dbo.FILM f
+where f.DNAME in
+(select f2.DNAME from dbo.FILM f2 where f2.GRADE>=80 group by f2.DNAME having count(f2.FID)>=2)
+group by f.DNAME
+9）
+select f.DNAME,a.ACTID,a.ANAME from dbo.ACTOR a,dbo.ACTIN ai,dbo.FILM f
+where ai.FID=f.FID and ai.ACTID=a.ACTID and f.DNAME in
+(select f.DNAME from dbo.FILM f
+group by f.DNAME
+having count(*)>=2)
+group by f.DNAME,a.ACTID,a.ANAME
+10）
+select a.ANAME, avg(ai.GRADE) from dbo.FILM f,dbo.ACTIN ai,dbo.ACTOR a
+where f.FID=ai.FID and ai.ACTID=a.ACTID and ai.ISLEADING='Y'
+group by ai.ACTID,a.ANAME
+11）
+select f.FNAME,s.YEAR,s.MONTH from dbo.SHOW s,dbo.FILM f
+where s.YEAR in (select min(s1.YEAR) from dbo.SHOW s1 where s1.FID=f.FID)
+and s.MONTH in (select min(s2.MONTH) from dbo.SHOW s2 where s2.FID=f.FID and s2.YEAR in
+(select min(s1.YEAR) from dbo.SHOW s1 where s1.FID=f.FID)
+)and f.GRADE>90
+12）
+select f.FNAME,s.YEAR,s.MONTH,s.TID from dbo.SHOW s,dbo.FILM f
+where s.YEAR in (select min(s1.YEAR) from dbo.SHOW s1 where s1.FID=f.FID)
+and s.MONTH in (select min(s2.MONTH) from dbo.SHOW s2 where s2.FID=f.FID and s2.YEAR in
+(select min(s1.YEAR) from dbo.SHOW s1 where s1.FID=f.FID)
+)and f.GRADE>90
+13）
+select f.FNAME, count(f.FID) from dbo.FILM f,dbo.SHOW s
+where f.FID=s.FID
+group by f.FID,f.FNAME
+14）
+select f.DNAME from dbo.FILM f
+where f.FTYPE in ('警匪','枪战','动作')
+15）
+select f.FID,f.FNAME,t.TNAME,s.YEAR,s.MONTH from dbo.FILM f,dbo.SHOW s,dbo.THEATER t
+where f.FID=s.FID and s.TID=t.TID and f.FNAME like '战狼%'
+order by f.FNAME
+16）
+select t.TID,t.TNAME from dbo.THEATER t
+where exists
+(select * from dbo.SHOW s where s.YEAR in(select s2.YEAR from dbo.SHOW s2 where s2.FID=2 and s2.TID=t.TID)
+and s.MONTH in (select s3.MONTH from dbo.SHOW s3 where s3.FID=2 and s3.TID=t.TID)
+and s.FID=1
+)
+group by t.TID,t.TNAME
+17）
+select a.ACTID,a.ANAME from dbo.ACTIN ai,dbo.ACTOR a
+where 85<=all
+(select f.GRADE from dbo.FILM f where f.FID in
+ (select FID from dbo.ACTIN ai where ai.ACTID=a.ACTID) 
+ )
+group by a.ACTID,a.ANAME
+18）
+select a.ANAME from dbo.ACTOR a
+where not exists
+( select * from dbo.FILM f where f.DNAME='吴宇森' and f.FID not in
+( select ai.FID from dbo.ACTIN ai where ai.ACTID=a.ACTID )
+)
+19）
+select a.ACTID,a.ANAME,f.FNAME from (dbo.ACTOR a left join dbo.ACTIN ai
+on a.ACTID=ai.ACTID) left join dbo.FILM f on f.FID=ai.FID
+group by a.ACTID,a.ANAME,f.FNAME
+20）
+select f.FID,f.FNAME from dbo.FILM f,dbo.SHOW s
+where f.GRADE is NULL and s.FID=f.FID
+group by f.FID,f.FNAME
+having count(*)>3
